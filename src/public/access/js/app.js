@@ -2,7 +2,7 @@ const socket = io.connect("http://localhost:3000");
 
 
 var userName;
-var currentRoom;
+var currentWindow;
 const listRooms = $('#list-rooms');
 const chatBox = $('#chat-box')
 
@@ -36,7 +36,7 @@ function addNewMessage(root, data, type) {
     root.append(`
     <div class="media w-50 mb-3 ${isSend ? 'ml-auto' : ''}">
       <div class="media-body ml-3">
-          ${isSend ? '' : `<b class="client" data-id="${data.userId}" data-name="${data.userName}">${data.userName}</b>`}
+          ${isSend ? '' : `<b class="client" data-id="${data.from}" data-name="${data.userName}">${data.userName}</b>`}
           <div class="${isSend ? 'bg-primary' : 'bg-light'} rounded py-2 px-3 mb-2">
               <p class="text-small mb-0 ${isSend ? 'text-white' : 'text-muted'}">${data.message}</p>
           </div>
@@ -68,22 +68,24 @@ $(document).ready(() => {
         });
         joinRoom(rooms[0].id)
     });
-    socket.on('RECEIVER_JOIN_ROOM', (id) => {
-        currentRoom = id;
-        console.log("LOGS: currentRoom", currentRoom);
+    socket.on('RECEIVER_JOIN_ROOM', (data) => {
+        currentWindow = data;
         $('#chat-box').html("")
         $(document).find('a.list-group-item.active').removeClass('active');
-        $(`#${id}`).addClass('active');
+        $(`#${data.id}`).addClass('active');
     })
 
     socket.on('RECEIVER_NEW_MESSAGE', (data) => {
-
-        if (data.toRoom === currentRoom || currentRoom === data.userId) {
+        
+        if ((data.isRoom && data.to === currentWindow.id) || (!data.isRoom && data.from === currentWindow.id)) {
             addNewMessage(chatBox, data, 'RECEIVER')
             return
         }
-        if ($(`#${data.userId}`).length) return;
-        addNewRoom(listRooms, { id: data.userId, name: data.userName, type: 'client' })
+        if (!data.isRoom) {
+            if ($(`#${data.from}`).length) return;
+            addNewRoom(listRooms, { id: data.from, name: data.userName, type: 'client' });
+        }
+
     })
     $('#input-message').keyup(function(e) {
         if (e.keyCode === 13) {
@@ -92,7 +94,7 @@ $(document).ready(() => {
 
             socket.emit('NEW_MESSAGE', {
                 userName,
-                currentRoom,
+                currentWindow,
                 message
             });
             $(this).val("");

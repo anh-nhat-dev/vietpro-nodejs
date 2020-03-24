@@ -27,29 +27,26 @@ const rooms = [{
 
 io.on("connection", function(socket) {
 
-    socket.on('GET_ROOMS', (data) => {
-
+    socket.on('GET_ROOMS', () => {
         socket.emit('RECEIVER_ROOMS', rooms);
-
     })
-    socket.on('JOIN_ROOM', (data) => {
-        console.log("LOGS: data", data);
-
-        const isRoom = rooms.find(room => room.id === data)
+    socket.on('JOIN_ROOM', (id) => {
+        const isRoom = rooms.find(room => room.id === id)
         if (isRoom) {
-            socket.join(data, () => {
-                socket.emit('RECEIVER_JOIN_ROOM', data)
+            socket.join(id, () => {
+                socket.emit('RECEIVER_JOIN_ROOM', { id, isRoom: true })
             });
             return;
         }
-        socket.emit('RECEIVER_JOIN_ROOM', data)
+        socket.emit('RECEIVER_JOIN_ROOM', { id, isRoom: false })
     });
     socket.on("NEW_MESSAGE", (data) => {
-        socket.to(data.currentRoom).broadcast.emit('RECEIVER_NEW_MESSAGE', {
+        socket.to(data.currentWindow.id).broadcast.emit('RECEIVER_NEW_MESSAGE', {
             message: data.message,
             userName: data.userName,
-            toRoom: data.currentRoom,
-            userId: socket.id
+            to: data.currentWindow.id,
+            from: socket.id,
+            isRoom: data.currentWindow.isRoom
         });
     })
     console.log("Client connected....");
